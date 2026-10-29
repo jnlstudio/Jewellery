@@ -75,7 +75,7 @@ header{padding:1.3rem 6vw 0}header ul{gap:1.2rem}.know{display:none}.dots{right:
 .left::before,.right::before{background:linear-gradient(0deg,rgba(var(--scrim),.95) 0,rgba(var(--scrim),.75) 30%,rgba(var(--scrim),0) 55%)}
 .right .lead,.lead{margin:1rem auto 0}.pill{margin-top:1.4rem}
 .eng{padding-left:1rem;gap:.5rem}.eng label{display:none}.eng .go span{display:none}
-.pill{display:none}}
+.pill{display:none}.scroller{display:none}}
 @media (prefers-reduced-motion:reduce){.scroller svg{animation:none}}
 </style>
 </head>
@@ -130,8 +130,22 @@ const order=[...Array(N).keys()].filter(i=>!MOB||i%2===0).sort((a,b)=>(a<60?0:1)
 /* full-size close-up, used only for the engraving preview */
 let plate=null;const plateReady=new Promise(r=>{const im=new Image();im.onload=()=>{plate=im;r()};im.onerror=r;im.src='f/239.webp'});
 let loaded=0;
-function load(i){return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{ok[i]=true;imgs[i]=im;r()};im.onerror=r;im.src=src(i)})}
-const nearest=i=>{for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])return imgs[i+d]}return null};
+/* Phones/tablets: keep the small compressed files in memory and decode only the frames around the
+   current position (a few at a time). Safari can silently drop decoded <img> data under memory pressure,
+   which left the canvas empty; frames we decode ourselves stay put until we release them. */
+const BM=MOB&&typeof createImageBitmap==='function'&&typeof fetch==='function';
+const blobs=new Array(N),bm=new Map(),pending=new Set(),MAXC=14;let curF=0;
+function load(i){
+ if(BM)return fetch(src(i)).then(r=>r.ok?r.blob():null).then(b=>{if(b){blobs[i]=b;ok[i]=true}}).catch(()=>{});
+ return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{ok[i]=true;imgs[i]=im;r()};im.onerror=r;im.src=src(i)})}
+function decodeF(i){
+ if(i<0||i>=N||!blobs[i]||bm.has(i)||pending.has(i))return;pending.add(i);
+ createImageBitmap(blobs[i]).then(b=>{pending.delete(i);bm.set(i,b);trimF();need=true}).catch(()=>pending.delete(i))}
+function trimF(){while(bm.size>MAXC){let far=-1,fd=-1;for(const k of bm.keys()){const d=Math.abs(k-curF);if(d>fd){fd=d;far=k}}const b=bm.get(far);bm.delete(far);try{b.close()}catch(e){}}}
+const nearest=i=>{
+ if(BM){const e=i-(i%2);curF=e;for(const d of [0,2,-2,4,-4,6])decodeF(e+d);
+  let best=null,bd=1e9;for(const [k,b] of bm){const d=Math.abs(k-e);if(d<bd){bd=d;best=b}}return best}
+ for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])return imgs[i+d]}return null};
 
 /* ---------- canvas ---------- */
 const cv=$('#cv'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
@@ -148,7 +162,9 @@ addEventListener('pageshow',repaint);addEventListener('focus',repaint);addEventL
 cv.addEventListener('contextrestored',repaint);
 setInterval(()=>{if(document.hidden)return;
  const d=Math.min(devicePixelRatio||1,MOB?1.5:2);if(Math.abs(cv.width-innerWidth*d)>2||Math.abs(cv.height-innerHeight*d)>2){size();return}
- try{const a=cx.getImageData(cv.width>>1,cv.height>>2,1,1).data[3],b=cx.getImageData(cv.width>>1,(cv.height*3)>>2,1,1).data[3];if(a===0||b===0)repaint()}catch(e){repaint()}},600);
+ try{const y=cv.width/cv.height>=1.1?.5:.44,px=(x,yy)=>cx.getImageData(Math.round(cv.width*x),Math.round(cv.height*yy),1,1).data,
+  bgLike=d=>d[3]===0||(Math.abs(d[0]-239)<3&&Math.abs(d[1]-228)<3&&Math.abs(d[2]-214)<3);
+  if(bgLike(px(.35,y))&&bgLike(px(.65,y))){if(BM){bm.forEach(b=>{try{b.close()}catch(e){}});bm.clear()}repaint()}}catch(e){repaint()}},600);
 function paint(im,alpha=1){
  const cw=cv.width,ch=cv.height,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;cx.globalAlpha=alpha;
  if(cw/ch>=1.1){ // landscape: fill the screen
