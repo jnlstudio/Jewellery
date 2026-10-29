@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>JNL Studio</title>
+<meta name="description" content="JNL Studio: a small UK-based online studio with a love for beautiful jewellery, thoughtful details and pieces with a little character of their own.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#efe4d6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500&family=Lato:wght@400&family=Mrs+Saint+Delafield&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#4a3125;--bg:#efe4d6;--scrim:239,228,214;--chip:rgba(255,255,255,.6);--dim:0}
+:root[data-theme="dark"]{--ink:#f6e8dc;--bg:#1d1512;--scrim:29,21,18;--chip:rgba(0,0,0,.35);--dim:.5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:400 1rem/1.7 Archivo,system-ui,sans-serif;overflow-x:hidden}
+body.lock{overflow:hidden}
+button,input{font:inherit;color:inherit;background:none;border:0}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+svg{stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#cv{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.shade{position:fixed;inset:0;z-index:1;background:#000;opacity:var(--dim);pointer-events:none;transition:opacity .6s}
+.loader{position:fixed;inset:0;z-index:100;background:#efe4d6;display:grid;place-content:center;justify-items:center;gap:.8rem;color:#4a3125;transition:transform .9s cubic-bezier(.7,0,.2,1)}
+.loader.out{transform:translateX(100%)}
+.loader .track{width:min(70vw,640px);height:1px;background:rgba(74,49,37,.25);margin-top:2.5rem}
+.loader .bar{display:block;height:1px;background:#4a3125;transform:scaleX(0);transform-origin:left;transition:transform .2s}
+header{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:2rem 8vw 0;transform:translateY(-140%);transition:transform .9s cubic-bezier(.2,.8,.2,1) .4s}
+body.ready header{transform:none}
+.brand{font:400 clamp(1.3rem,2.4vw,2rem)/1 Archivo,sans-serif;letter-spacing:.01em}
+.brand{display:flex;align-items:center;letter-spacing:.18em}
+.brand small{font-size:.5em;letter-spacing:.42em}
+.brand .bar-div{display:inline-block;width:1px;height:1.1em;background:currentColor;opacity:.6;margin:0 .7em 0 .55em}
+header ul{display:flex;gap:2.4rem;list-style:none;align-items:center;font-weight:500}
+header svg{width:24px;height:24px}
+.dots{position:fixed;right:3vw;top:50%;transform:translateY(-50%);z-index:20;display:grid;gap:1.1rem}
+.dots button{width:9px;height:9px;border-radius:50%;background:var(--ink);opacity:.35;transition:transform .4s,opacity .4s}
+.dots button.on{transform:scale(1.5);opacity:1}
+.scene{position:fixed;inset:0;z-index:2;display:flex;pointer-events:none;opacity:0;visibility:hidden}
+.scene.vis{visibility:visible}
+.scene::before{content:"";position:absolute;inset:0;z-index:-1}
+.scene button,.scene input{pointer-events:auto}
+.left{align-items:center;padding:0 8vw}.left::before{background:linear-gradient(90deg,rgba(var(--scrim),.8) 0,rgba(var(--scrim),.42) 30%,rgba(var(--scrim),0) 50%)}
+.right{align-items:center;justify-content:flex-end;padding:0 10vw;text-align:right}.right::before{background:linear-gradient(270deg,rgba(var(--scrim),.8) 0,rgba(var(--scrim),.42) 30%,rgba(var(--scrim),0) 50%)}
+.right .lead{margin-left:auto}
+.top{flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:clamp(6rem,13vh,9rem) 6vw calc(2.4rem + env(safe-area-inset-bottom,0px))}
+.top::before{background:linear-gradient(180deg,rgba(var(--scrim),.78) 0,rgba(var(--scrim),.35) 22%,rgba(var(--scrim),0) 36%,rgba(var(--scrim),0) 78%,rgba(var(--scrim),.6) 100%)}
+.txt{max-width:34rem;text-shadow:0 1px 16px rgba(var(--scrim),.85)}
+.disp{font:500 clamp(3rem,7.4vw,7rem)/.9 "Playfair Display",Georgia,serif;text-transform:uppercase;letter-spacing:-.02em}
+.eyebrow{display:block;font:500 .78rem/1.4 Archivo,sans-serif;letter-spacing:.42em;text-transform:uppercase;margin-bottom:1.2rem;opacity:.85}
+.script{display:block;font:400 clamp(2.4rem,4.4vw,4rem)/1 "Mrs Saint Delafield","Snell Roundhand",cursive;margin-bottom:-.3rem}
+.lead{max-width:30rem;font-size:clamp(.95rem,1.2vw,1.08rem);margin-top:1.5rem}
+.top .lead{margin:1rem auto 0}
+.pill{display:inline-flex;align-items:center;gap:1.2rem;border:1px solid var(--ink);border-radius:60px;padding:.8rem .8rem .8rem 1.9rem;font-size:1.15rem;margin-top:2.6rem;transition:background .3s,color .3s}
+.pill svg{width:40px;height:40px}
+.pill:hover{background:var(--ink);color:var(--bg)}
+.scroller{position:fixed;left:0;right:0;bottom:calc(1.8rem + env(safe-area-inset-bottom,0px));z-index:3;text-align:center;font-size:.8rem;display:grid;justify-items:center;transition:opacity .4s}
+.scroller svg{width:24px;height:24px;stroke-width:2;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(7px)}}
+.endbox{display:grid;justify-items:center;gap:.9rem;pointer-events:auto}
+.mail{display:inline-flex;align-items:center;gap:.5rem;color:var(--ink);font-size:.9rem;letter-spacing:.04em;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:2px}
+.mail svg{width:16px;height:16px}
+.eng{display:flex;align-items:center;gap:.8rem;background:var(--chip);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:60px;padding:.55rem .6rem .55rem 1.4rem;max-width:94vw}
+.eng label{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;opacity:.8;white-space:nowrap}
+.eng input{font:400 1.05rem/1 Lato,Archivo,sans-serif;letter-spacing:.24em;text-transform:uppercase;border-bottom:1px solid var(--ink);padding:.4rem .2rem;width:12ch;min-width:0;outline:none}
+.eng input::placeholder{color:var(--ink);opacity:.4}
+.eng .go{display:inline-flex;align-items:center;gap:.45rem;border-radius:40px;padding:.6rem 1.1rem;background:var(--ink);color:var(--bg);font-size:.9rem;white-space:nowrap}
+.eng .go svg{width:16px;height:16px}
+.toast{position:fixed;left:50%;bottom:calc(6.5rem + env(safe-area-inset-bottom,0px));z-index:30;transform:translate(-50%,10px);opacity:0;background:var(--ink);color:var(--bg);padding:.55rem 1.2rem;border-radius:40px;font-size:.9rem;max-width:90vw;overflow-wrap:anywhere;text-align:center;pointer-events:none;transition:opacity .35s,transform .35s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.sel{pointer-events:auto;user-select:all;border-radius:14px}
+@media (max-width:760px){
+header{padding:1.3rem 6vw 0}header ul{gap:1.2rem}.know{display:none}.dots{right:2.5vw}
+.left,.right{align-items:flex-end;justify-content:center;text-align:center;padding:0 7vw calc(9vh + env(safe-area-inset-bottom,0px))}
+.left::before,.right::before{background:linear-gradient(0deg,rgba(var(--scrim),.95) 0,rgba(var(--scrim),.75) 30%,rgba(var(--scrim),0) 55%)}
+.right .lead,.lead{margin:1rem auto 0}.pill{margin-top:1.4rem}
+.eng{padding-left:1rem;gap:.5rem}.eng label{display:none}.eng .go span{display:none}}
+@media (prefers-reduced-motion:reduce){.scroller svg{animation:none}}
+</style>
+</head>
+<body class="lock">
+<div class="loader" role="status"><svg width="52" height="52" viewBox="0 0 52 52" stroke-width="1.5"><circle cx="26" cy="26" r="16" stroke-dasharray="1 7"/><circle cx="26" cy="10" r="3.2"/><circle cx="40" cy="20" r="3.2"/><circle cx="38" cy="36" r="3.2"/><circle cx="14" cy="36" r="3.2"/><circle cx="12" cy="20" r="3.2"/><rect x="20" y="39" width="12" height="4" rx="1"/></svg><p id="ltxt">Loading… 0%</p><div class="track"><i class="bar"></i></div></div>
+
+<canvas id="cv" aria-label="Pearl name bracelet on cream marble, animated as you scroll" role="img"></canvas>
+<div class="shade"></div>
+
+<header><h1 class="brand" aria-label="JNL Studio">JNL<i class="bar-div" aria-hidden="true"></i><small>STUDIO</small></h1>
+<ul><li><button class="know" data-go="1">Know more</button></li>
+<li><button id="snd" aria-label="Toggle sound" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path id="wave" d="M19 5a10 10 0 0 1 0 14M15.5 8.5a5 5 0 0 1 0 7"/><path id="mute" d="m16 9 6 6M22 9l-6 6" style="display:none"/></svg></button></li>
+<li><a id="mailIc" href="mailto:jnlstudio.design@gmail.com" aria-label="Email jnlstudio.design@gmail.com" style="display:grid;color:inherit"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg></a></li>
+<li><button id="nt" aria-label="Toggle night mode"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button></li></ul></header>
+<nav class="dots" aria-label="Sections"><button class="on" aria-label="Intro"></button><button aria-label="A little detail"></button><button aria-label="A little beauty"></button><button aria-label="Your name"></button></nav>
+
+<section class="scene left"><div class="txt"><span class="eyebrow">✧ JNL Studio ✧</span><h2 class="disp" style="font-size:clamp(2.8rem,5.4vw,5.4rem)">Beautiful<br>Little<br>Things</h2>
+<p class="lead">A small UK-based online studio with a love for beautiful jewellery, thoughtful details and pieces with a little character of their own.</p>
+<button class="pill" data-go="1">Start now<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19"/><path d="m15 23 8 8 8-8M23 15v16"/></svg></button></div></section>
+
+<section class="scene right"><div class="txt"><span class="script">a little</span><h2 class="disp">Detail</h2>
+<p class="lead">Our collection brings together elegant, contemporary and vintage-inspired styles, carefully selected for their distinctive details, beautiful silhouettes and effortless appeal.</p></div></section>
+
+<section class="scene left"><div class="txt"><span class="script">a little</span><h2 class="disp">Beauty</h2>
+<p class="lead">From understated everyday pieces to something a little more expressive, JNL Studio is about those small finishing touches that can make an outfit feel special.</p></div></section>
+
+<section class="scene top"><div class="txt"><span class="script">a little something</span><h2 class="disp">For You</h2>
+<p class="lead" id="engNote">Type a name to see it engraved on the bar.</p></div>
+<div class="endbox"><div class="eng" id="engRow"><label for="txt">Your name</label><input id="txt" maxlength="10" autocomplete="off" spellcheck="false" placeholder="NICOLE" aria-describedby="engNote">
+<button class="go" id="share" aria-label="Copy share link"><svg viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span>Share</span></button></div><a class="mail" href="mailto:jnlstudio.design@gmail.com"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg>jnlstudio.design@gmail.com</a></div></section>
+
+<div class="scroller"><p>Scroll to explore</p><svg viewBox="0 0 24 24"><path d="m8 12 4 4 4-4M12 8v8"/></svg></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="spacer" aria-hidden="true"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+/* always open at the top: stop Safari restoring the last scroll position */
+try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+scrollTo(0,0);addEventListener('pageshow',e=>{if(e.persisted&&!location.hash)scrollTo(0,0)});
+document.documentElement.dataset.theme='light'; // day mode by default, whatever the device or app theme
+
+/* ---------- video frames: 240 stills cut from the 10 s clip, four shots ---------- */
+const N=240,SEG=[[0,59],[60,118],[119,176],[177,239]],UNIT=1.3; // UNIT = viewport heights of scroll per scene
+const imgs=new Array(N),ok=new Array(N).fill(false);
+const src=i=>'f/'+String(i).padStart(3,'0')+'.webp';
+/* load the opening shot first so the page can start quickly, then everything else */
+const order=[...Array(N).keys()].sort((a,b)=>(a<60?0:1)-(b<60?0:1)||a-b);
+let loaded=0;
+function load(i){return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{ok[i]=true;imgs[i]=im;r()};im.onerror=r;im.src=src(i)})}
+const nearest=i=>{for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])return imgs[i+d]}return null};
+
+/* ---------- canvas ---------- */
+const cv=$('#cv'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
+const tiny=document.createElement('canvas');tiny.width=48;tiny.height=27;const tx=tiny.getContext('2d');
+const feather=document.createElement('canvas'),fx=feather.getContext('2d');
+function size(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;
+ $('#spacer').style.height=(100+UNIT*100*(SEG.length-1)+60)+'vh';need=true}
+addEventListener('resize',size);
+function paint(im,alpha=1){
+ const cw=cv.width,ch=cv.height,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;cx.globalAlpha=alpha;
+ if(cw/ch>=1.1){ // landscape: fill the screen
+  const s=Math.max(cw/iw,ch/ih);cx.drawImage(im,(cw-iw*s)/2,(ch-ih*s)/2,iw*s,ih*s);
+ }else{ // portrait: keep most of the frame visible, soft blurred fill above and below
+  tx.drawImage(im,0,0,48,27);const sb=Math.max(cw/iw,ch/ih);cx.drawImage(tiny,(cw-iw*sb)/2,(ch-ih*sb)/2,iw*sb,ih*sb);
+  const s=cw*1.3/iw,dw=iw*s,dh=ih*s,y=ch*.44-dh/2;
+  if(feather.width!==Math.round(cw)||feather.height!==Math.round(dh)){feather.width=Math.round(cw);feather.height=Math.round(dh)}
+  fx.globalCompositeOperation='source-over';fx.clearRect(0,0,feather.width,feather.height);fx.drawImage(im,(cw-dw)/2,0,dw,dh);
+  const g=fx.createLinearGradient(0,0,0,dh);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.16,'#000');g.addColorStop(.84,'#000');g.addColorStop(1,'rgba(0,0,0,0)');
+  fx.globalCompositeOperation='destination-in';fx.fillStyle=g;fx.fillRect(0,0,feather.width,dh);cx.drawImage(feather,0,y);
+ }
+ cx.globalAlpha=1}
+
+/* ---------- engraving preview on the last frame ---------- */
+const BOX={x:654,y:528,w:579,h:129}; // where NICOLE sits in the 1920x1080 final frame
+let custom='',engFrame=null,engOK=true;
+function buildEng(){
+ engFrame=null;const t=custom.trim();if(!t||t==='NICOLE'||!ok[N-1])return;
+ const base=imgs[N-1],c=document.createElement('canvas');c.width=1920;c.height=1080;const g=c.getContext('2d');g.drawImage(base,0,0,1920,1080);
+ let d;try{d=g.getImageData(BOX.x,BOX.y-9,BOX.w,BOX.h+18)}catch(e){engOK=false;$('#engRow').hidden=true;$('#engNote').textContent='Every bracelet is engraved with the name you choose.';return}
+ /* fill the old letters by blending the clean gold just above and below them */
+ const w=BOX.w,h=BOX.h+18,p=d.data,row=(y,x)=>{let r=0,gg=0,b=0;for(let k=0;k<3;k++){const i=((y+k)*w+x)*4;r+=p[i];gg+=p[i+1];b+=p[i+2]}return[r/3,gg/3,b/3]};
+ for(let x=0;x<w;x++){const a=row(0,x),b=row(h-3,x);for(let y=3;y<h-3;y++){const t2=(y-3)/(h-6),i=(y*w+x)*4,n=(Math.random()-.5)*4;
+  p[i]=a[0]+(b[0]-a[0])*t2+n;p[i+1]=a[1]+(b[1]-a[1])*t2+n;p[i+2]=a[2]+(b[2]-a[2])*t2+n}}
+ g.putImageData(d,BOX.x,BOX.y-9);
+ /* engrave the new name in a similar letter style */
+ const s=[...t];let fs=138,sp=.42;const font=()=>`400 ${fs}px Lato, Archivo, "Helvetica Neue", sans-serif`;
+ const width=()=>{g.font=font();return s.reduce((a,ch)=>a+g.measureText(ch).width,0)+fs*sp*(s.length-1)};
+ while(width()>BOX.w-15&&fs>45)fs-=3;
+ let x=960-width()/2+3;g.textBaseline='alphabetic';g.font=font();const yb=639;
+ s.forEach(ch=>{const cw=g.measureText(ch).width;
+  g.filter='blur(.7px)';g.fillStyle='rgba(255,226,165,.45)';g.fillText(ch,x+2.2,yb+2.2);
+  g.fillStyle='rgba(120,78,34,.92)';g.fillText(ch,x,yb);g.filter='none';
+  g.fillStyle='rgba(88,55,22,.35)';g.fillText(ch,x-1.2,yb-1.2);x+=cw+fs*sp});
+ engFrame=c}
+
+/* ---------- scroll → frame ---------- */
+let target=0,cur=0,need=true,lastKey='';
+const prog=()=>{const vh=innerHeight,max=document.documentElement.scrollHeight-vh;return max>0?Math.min(1,scrollY/max)*(SEG.length-1+.999):0};
+addEventListener('scroll',()=>{target=prog()},{passive:true});
+function frameFor(P){
+ const k=Math.min(SEG.length-1,Math.floor(P)),l=P-k,[a,b]=SEG[k];
+ if(k===SEG.length-1){const f=Math.min(1,l/.85);return{f:Math.round(a+f*(b-a))}}
+ if(l<.8)return{f:Math.round(a+l/.8*(b-a))};
+ return{f:b,next:SEG[k+1][0],mix:(l-.8)/.2}}
+const scenes=$$('.scene');
+function texts(P){
+ scenes.forEach((s,k)=>{let o;
+  if(k===0)o=1-sm(.55,.78,P);else if(k===SEG.length-1)o=sm(k-.25,k-.02,P);else o=sm(k-.2,k+.02,P)*(1-sm(k+.55,k+.78,P));
+  s.style.opacity=o.toFixed(3);s.classList.toggle('vis',o>.01);s.firstElementChild.style.transform=`translateY(${((1-o)*24).toFixed(1)}px)`});
+ $('.scroller').style.opacity=1-sm(.05,.3,P);
+ const n=Math.min(SEG.length-1,Math.floor(P+.25));$$('.dots button').forEach((d,i)=>d.classList.toggle('on',i===n));
+ if(n!==scene){scene=n;chime(SCALE[n*2],.05)}
+ if(lp&&ac)lp.frequency.setTargetAtTime(600+P/(SEG.length-1)*1600,ac.currentTime,.4)}
+const sm=(e0,e1,x)=>{const t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
+let scene=0;
+function loop(){
+ cur+=(target-cur)*.14;if(Math.abs(target-cur)<.0005)cur=target;
+ const fr=frameFor(cur),key=fr.f+'|'+(fr.next??'')+'|'+(fr.mix??0).toFixed(3)+'|'+(engFrame?custom:'');
+ if(key!==lastKey||need){
+  const im=(fr.f===N-1&&engFrame)?engFrame:nearest(fr.f);
+  if(im){cx.fillStyle='#efe4d6';cx.fillRect(0,0,cv.width,cv.height);paint(im);if(fr.next!=null){const nx=nearest(fr.next);if(nx)paint(nx,fr.mix)}lastKey=key;need=false}}
+ texts(cur);requestAnimationFrame(loop)}
+
+const goTo=k=>{const max=document.documentElement.scrollHeight-innerHeight;scrollTo({top:max*k/(SEG.length-1+.999)+(k===SEG.length-1?max:0),behavior:'smooth'})};
+$$('[data-go]').forEach(b=>b.onclick=()=>goTo(+b.dataset.go));
+$$('.dots button').forEach((d,i)=>d.onclick=()=>goTo(i));
+
+/* ---------- sound: generated ambient pad + chimes (Web Audio, no files) ---------- */
+let ac=null,master=null,lp=null,soundOn=true;
+function initAudio(){
+ if(ac)return;try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+ master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+ lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;lp.Q.value=.6;lp.connect(master);
+ [110,138.59,164.81,207.65,246.94].forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain(),l=ac.createOscillator(),lg=ac.createGain();
+  o.type=i%2?'triangle':'sine';o.frequency.value=f;o.detune.value=(i-2)*5;g.gain.value=.05;
+  l.frequency.value=.05+i*.023;lg.gain.value=.04;l.connect(lg).connect(g.gain);o.connect(g).connect(lp);o.start();l.start()});
+ if(soundOn)fadeTo(.55)}
+function fadeTo(v){if(!ac)return;if(ac.state==='suspended')ac.resume();master.gain.cancelScheduledValues(ac.currentTime);master.gain.setTargetAtTime(v,ac.currentTime,.6)}
+function chime(f,vol=.09){if(!ac||!soundOn)return;const t=ac.currentTime;
+ [[f,vol],[f*2.76,vol*.25],[f*5.4,vol*.08]].forEach(([fr,v])=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=fr;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+1.6);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+1.7)})}
+['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,initAudio,{once:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!ac)return;document.hidden?ac.suspend():ac.resume()});
+const SCALE=[659.25,739.99,830.61,987.77,1108.73,1318.51,1479.98,1661.22,1975.53];
+
+/* ---------- header toggles ---------- */
+const dark=()=>document.documentElement.dataset.theme==='dark'; // always starts in day mode; night only when the visitor taps the moon
+$('#nt').onclick=()=>{document.documentElement.dataset.theme=dark()?'light':'dark'};
+$('#snd').onclick=e=>{const b=e.currentTarget;soundOn=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',soundOn);
+ $('#wave').style.display=soundOn?'':'none';$('#mute').style.display=soundOn?'none':'';initAudio();fadeTo(soundOn?.55:0)};
+
+/* ---------- name input + share ---------- */
+let tt;const toast=(msg,sel=false)=>{const t=$('#toast');t.textContent=msg;t.classList.toggle('sel',sel);t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on','sel'),sel?7000:2200)};
+const clean=t=>(t||'').toUpperCase().replace(/[^A-Z0-9 &.'\-]/g,'').slice(0,10);
+const inp=$('#txt');let bt;
+inp.addEventListener('input',()=>{const v=clean(inp.value);if(v!==inp.value)inp.value=v;custom=v;clearTimeout(bt);
+ bt=setTimeout(()=>{buildEng();need=true},120);chime(1975.53+Math.random()*400,.025)});
+inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur()});
+$('#share').onclick=async()=>{const url=location.href.split('#')[0]+(custom?'#t='+encodeURIComponent(custom):'');
+ try{await navigator.clipboard.writeText(url);toast('Link copied');chime(1661.22,.07)}catch(e){toast(url,true)}};
+const fromHash=clean(decodeURIComponent((location.hash.match(/t=([^&]*)/)||[])[1]||''));
+
+/* ---------- start ---------- */
+size();
+(async()=>{
+ const bar=$('.loader .bar'),lt=$('#ltxt');let first=true;
+ const fontReady=document.fonts?document.fonts.ready:Promise.resolve();
+ const queue=[...order];const workers=[...Array(6)].map(async()=>{while(queue.length){const i=queue.shift();await load(i);loaded++;
+  const pct=Math.round(loaded/N*100);bar.style.transform=`scaleX(${loaded/N})`;lt.textContent=`Loading… ${pct}%`;
+  if(first&&loaded>=60){first=false;start()}}});
+ async function start(){await fontReady;requestAnimationFrame(loop);$('.loader').classList.add('out');document.body.classList.add('ready');
+  setTimeout(()=>{document.body.classList.remove('lock');$('.loader').style.display='none';
+   if(fromHash){inp.value=custom=fromHash;goTo(SEG.length-1);try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}else scrollTo(0,0)},900)}
+ await Promise.all(workers);if(first){first=false;start()}
+ await fontReady;if(custom){buildEng();need=true}
+})();
+</script>
+</body>
+</html>
