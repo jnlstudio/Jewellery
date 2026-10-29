@@ -117,9 +117,14 @@ document.documentElement.dataset.theme='light'; // day mode by default, whatever
 /* ---------- video frames: 240 stills cut from the 10 s clip, four shots ---------- */
 const N=240,SEG=[[0,59],[60,118],[119,176],[177,239]],UNIT=1.3; // UNIT = viewport heights of scroll per scene
 const imgs=new Array(N),ok=new Array(N).fill(false);
-const src=i=>'f/'+String(i).padStart(3,'0')+'.webp';
+/* phones and small tablets get a lighter set (960 px, every 2nd frame) to keep memory low on iPhone/Safari */
+const MOB=innerWidth<=900||Math.min(screen.width,screen.height)<=820;
+const pad=i=>String(i).padStart(3,'0');
+const src=i=>MOB?'m/'+pad(i-(i%2))+'.webp':'f/'+pad(i)+'.webp';
 /* load the opening shot first so the page can start quickly, then everything else */
-const order=[...Array(N).keys()].sort((a,b)=>(a<60?0:1)-(b<60?0:1)||a-b);
+const order=[...Array(N).keys()].filter(i=>!MOB||i%2===0).sort((a,b)=>(a<60?0:1)-(b<60?0:1)||a-b);
+/* full-size close-up, used only for the engraving preview */
+let plate=null;const plateReady=new Promise(r=>{const im=new Image();im.onload=()=>{plate=im;r()};im.onerror=r;im.src='f/239.webp'});
 let loaded=0;
 function load(i){return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{ok[i]=true;imgs[i]=im;r()};im.onerror=r;im.src=src(i)})}
 const nearest=i=>{for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])return imgs[i+d]}return null};
@@ -128,9 +133,15 @@ const nearest=i=>{for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])re
 const cv=$('#cv'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
 const tiny=document.createElement('canvas');tiny.width=48;tiny.height=27;const tx=tiny.getContext('2d');
 const feather=document.createElement('canvas'),fx=feather.getContext('2d');
-function size(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;
+function size(){DPR=Math.min(devicePixelRatio||1,MOB?1.5:2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;
  $('#spacer').style.height=(100+UNIT*100*(SEG.length-1)+60)+'vh';need=true}
-addEventListener('resize',size);
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(size,100)});
+/* Safari can throw away canvas pixels while the tab is in the background or the phone is locked:
+   always repaint when the page becomes visible again or is restored from the back/forward cache */
+const repaint=()=>{need=true;lastKey=''};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)repaint()});
+addEventListener('pageshow',repaint);addEventListener('focus',repaint);addEventListener('orientationchange',()=>setTimeout(size,250));
+cv.addEventListener('contextrestored',repaint);
 function paint(im,alpha=1){
  const cw=cv.width,ch=cv.height,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;cx.globalAlpha=alpha;
  if(cw/ch>=1.1){ // landscape: fill the screen
@@ -147,21 +158,24 @@ function paint(im,alpha=1){
 
 /* ---------- engraving preview on the last frame ---------- */
 const BOX={x:654,y:528,w:579,h:129}; // where NICOLE sits in the 1920x1080 final frame
-let custom='',engFrame=null,engOK=true;
+let custom='',engFrame=null,engOK=true,engC=null,engG=null,blankBox=null;
 function buildEng(){
- engFrame=null;const t=custom.trim();if(!t||t==='NICOLE'||!ok[N-1])return;
- const base=imgs[N-1],c=document.createElement('canvas');c.width=1920;c.height=1080;const g=c.getContext('2d');g.drawImage(base,0,0,1920,1080);
+ engFrame=null;const t=custom.trim();if(!t||t==='NICOLE'||!plate)return;
+ /* one canvas, created once and reused for every keystroke (new canvases per letter exhaust Safari's canvas memory) */
+ if(!engC){engC=document.createElement('canvas');engC.width=1920;engC.height=1080;engG=engC.getContext('2d')}
+ const c=engC,g=engG;g.filter='none';g.globalAlpha=1;g.drawImage(plate,0,0,1920,1080);
+ if(blankBox){g.putImageData(blankBox,BOX.x,BOX.y-9)}else{
  let d;try{d=g.getImageData(BOX.x,BOX.y-9,BOX.w,BOX.h+18)}catch(e){engOK=false;$('#engRow').hidden=true;$('#engNote').textContent='Every bracelet is engraved with the name you choose.';return}
  /* fill the old letters by blending the clean gold just above and below them */
  const w=BOX.w,h=BOX.h+18,p=d.data,row=(y,x)=>{let r=0,gg=0,b=0;for(let k=0;k<3;k++){const i=((y+k)*w+x)*4;r+=p[i];gg+=p[i+1];b+=p[i+2]}return[r/3,gg/3,b/3]};
  for(let x=0;x<w;x++){const a=row(0,x),b=row(h-3,x);for(let y=3;y<h-3;y++){const t2=(y-3)/(h-6),i=(y*w+x)*4,n=(Math.random()-.5)*4;
   p[i]=a[0]+(b[0]-a[0])*t2+n;p[i+1]=a[1]+(b[1]-a[1])*t2+n;p[i+2]=a[2]+(b[2]-a[2])*t2+n}}
- g.putImageData(d,BOX.x,BOX.y-9);
+ g.putImageData(d,BOX.x,BOX.y-9);blankBox=d}
  /* engrave the new name in a similar letter style */
  const s=[...t];let fs=138,sp=.42;const font=()=>`400 ${fs}px Lato, Archivo, "Helvetica Neue", sans-serif`;
  const width=()=>{g.font=font();return s.reduce((a,ch)=>a+g.measureText(ch).width,0)+fs*sp*(s.length-1)};
  while(width()>BOX.w-15&&fs>45)fs-=3;
- let x=960-width()/2+3;g.textBaseline='alphabetic';g.font=font();const yb=639;
+ let x=943.5-width()/2;g.textBaseline='alphabetic';g.font=font();const yb=639;
  s.forEach(ch=>{const cw=g.measureText(ch).width;
   g.filter='blur(.7px)';g.fillStyle='rgba(255,226,165,.45)';g.fillText(ch,x+2.2,yb+2.2);
   g.fillStyle='rgba(120,78,34,.92)';g.fillText(ch,x,yb);g.filter='none';
@@ -192,9 +206,11 @@ function loop(){
  cur+=(target-cur)*.14;if(Math.abs(target-cur)<.0005)cur=target;
  const fr=frameFor(cur),key=fr.f+'|'+(fr.next??'')+'|'+(fr.mix??0).toFixed(3)+'|'+(engFrame?custom:'');
  if(key!==lastKey||need){
-  const im=(fr.f===N-1&&engFrame)?engFrame:nearest(fr.f);
+  const im=(fr.f>=N-2&&engFrame)?engFrame:nearest(fr.f);
   if(im){cx.fillStyle='#efe4d6';cx.fillRect(0,0,cv.width,cv.height);paint(im);if(fr.next!=null){const nx=nearest(fr.next);if(nx)paint(nx,fr.mix)}lastKey=key;need=false}}
  texts(cur);requestAnimationFrame(loop)}
+/* make sure the drawing surface still matches the screen (iOS can resize/clear it when the toolbar hides) */
+setInterval(()=>{const d=Math.min(devicePixelRatio||1,MOB?1.5:2);if(Math.abs(cv.width-innerWidth*d)>2||Math.abs(cv.height-innerHeight*d)>2)size()},1000);
 
 const goTo=k=>{const max=document.documentElement.scrollHeight-innerHeight;scrollTo({top:max*k/(SEG.length-1+.999)+(k===SEG.length-1?max:0),behavior:'smooth'})};
 $$('[data-go]').forEach(b=>b.onclick=()=>goTo(+b.dataset.go));
@@ -241,13 +257,13 @@ size();
  const bar=$('.loader .bar'),lt=$('#ltxt');let first=true;
  const fontReady=document.fonts?document.fonts.ready:Promise.resolve();
  const queue=[...order];const workers=[...Array(6)].map(async()=>{while(queue.length){const i=queue.shift();await load(i);loaded++;
-  const pct=Math.round(loaded/N*100);bar.style.transform=`scaleX(${loaded/N})`;lt.textContent=`Loading… ${pct}%`;
-  if(first&&loaded>=60){first=false;start()}}});
+  const tot=order.length,pct=Math.round(loaded/tot*100);bar.style.transform=`scaleX(${loaded/tot})`;lt.textContent=`Loading… ${pct}%`;
+  if(first&&loaded>=order.filter(i=>i<60).length){first=false;start()}}});
  async function start(){await fontReady;requestAnimationFrame(loop);$('.loader').classList.add('out');document.body.classList.add('ready');
   setTimeout(()=>{document.body.classList.remove('lock');$('.loader').style.display='none';
    if(fromHash){inp.value=custom=fromHash;goTo(SEG.length-1)}},900)}
  await Promise.all(workers);if(first){first=false;start()}
- await fontReady;if(custom){buildEng();need=true}
+ await plateReady;await fontReady;if(custom){buildEng();need=true}
 })();
 </script>
 </body>
