@@ -112,6 +112,9 @@ header{padding:1.3rem 6vw 0}header ul{gap:1.2rem}.know{display:none}.dots{right:
 
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+/* always open at the top: stop Safari restoring the last scroll position */
+try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+scrollTo(0,0);addEventListener('pageshow',e=>{if(e.persisted&&!location.hash)scrollTo(0,0)});
 document.documentElement.dataset.theme='light'; // day mode by default, whatever the device or app theme
 
 /* ---------- video frames: 240 stills cut from the 10 s clip, four shots ---------- */
@@ -229,7 +232,7 @@ let tt;const toast=(msg,sel=false)=>{const t=$('#toast');t.textContent=msg;t.cla
 const clean=t=>(t||'').toUpperCase().replace(/[^A-Z0-9 &.'\-]/g,'').slice(0,10);
 const inp=$('#txt');let bt;
 inp.addEventListener('input',()=>{const v=clean(inp.value);if(v!==inp.value)inp.value=v;custom=v;clearTimeout(bt);
- bt=setTimeout(()=>{buildEng();need=true;try{history.replaceState(null,'','#t='+encodeURIComponent(v))}catch(e){}},120);chime(1975.53+Math.random()*400,.025)});
+ bt=setTimeout(()=>{buildEng();need=true},120);chime(1975.53+Math.random()*400,.025)});
 inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur()});
 $('#share').onclick=async()=>{const url=location.href.split('#')[0]+(custom?'#t='+encodeURIComponent(custom):'');
  try{await navigator.clipboard.writeText(url);toast('Link copied');chime(1661.22,.07)}catch(e){toast(url,true)}};
@@ -245,7 +248,7 @@ size();
   if(first&&loaded>=60){first=false;start()}}});
  async function start(){await fontReady;requestAnimationFrame(loop);$('.loader').classList.add('out');document.body.classList.add('ready');
   setTimeout(()=>{document.body.classList.remove('lock');$('.loader').style.display='none';
-   if(fromHash){inp.value=custom=fromHash;goTo(SEG.length-1)}},900)}
+   if(fromHash){inp.value=custom=fromHash;goTo(SEG.length-1);try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}else scrollTo(0,0)},900)}
  await Promise.all(workers);if(first){first=false;start()}
  await fontReady;if(custom){buildEng();need=true}
 })();
