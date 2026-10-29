@@ -73,7 +73,10 @@ header svg{width:24px;height:24px}
 header{padding:1.3rem 6vw 0}header ul{gap:1.2rem}.know{display:none}.dots{right:2.5vw}
 .left,.right{align-items:flex-end;justify-content:center;text-align:center;padding:0 7vw calc(9vh + env(safe-area-inset-bottom,0px))}
 .left::before,.right::before{background:linear-gradient(0deg,rgba(var(--scrim),.95) 0,rgba(var(--scrim),.75) 30%,rgba(var(--scrim),0) 55%)}
-.right .lead,.lead{margin:1rem auto 0}.pill{margin-top:1.4rem}
+.right .lead,.lead{margin:.8rem auto 0}.pill{margin-top:1.2rem;font-size:1.05rem;padding:.65rem .65rem .65rem 1.6rem}.pill svg{width:36px;height:36px}
+.left,.right{padding-bottom:calc(2.2rem + env(safe-area-inset-bottom,0px))}
+.left::before,.right::before{background:linear-gradient(0deg,rgba(var(--scrim),.9) 0,rgba(var(--scrim),.6) 35%,rgba(var(--scrim),0) 52%)}
+.scroller{display:none}.eyebrow{margin-bottom:.7rem;font-size:.7rem}
 .eng{padding-left:1rem;gap:.5rem}.eng label{display:none}.eng .go span{display:none}}
 @media (prefers-reduced-motion:reduce){.scroller svg{animation:none}}
 </style>
@@ -148,7 +151,11 @@ function paint(im,alpha=1){
   const s=Math.max(cw/iw,ch/ih);cx.drawImage(im,(cw-iw*s)/2,(ch-ih*s)/2,iw*s,ih*s);
  }else{ // portrait: keep most of the frame visible, soft blurred fill above and below
   tx.drawImage(im,0,0,48,27);const sb=Math.max(cw/iw,ch/ih);cx.drawImage(tiny,(cw-iw*sb)/2,(ch-ih*sb)/2,iw*sb,ih*sb);
-  const s=cw*1.3/iw,dw=iw*s,dh=ih*s,y=ch*.44-dh/2;
+  /* phones: in the first three scenes the bracelet sits just under the header so the text below never covers it;
+     in the last scene it moves to the middle, between the title and the name box */
+  const t=sm(2.7,3.0,cur),s=cw*(1.16+.14*t)/iw,dw=iw*s,dh=ih*s;
+  const hb=(document.querySelector('header').getBoundingClientRect().bottom+4)*DPR,yTop=hb+dh*.5,yMid=ch*.44;
+  const y=yTop+(yMid-yTop)*t-dh/2;
   if(feather.width!==Math.round(cw)||feather.height!==Math.round(dh)){feather.width=Math.round(cw);feather.height=Math.round(dh)}
   fx.globalCompositeOperation='source-over';fx.clearRect(0,0,feather.width,feather.height);fx.drawImage(im,(cw-dw)/2,0,dw,dh);
   const g=fx.createLinearGradient(0,0,0,dh);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.16,'#000');g.addColorStop(.84,'#000');g.addColorStop(1,'rgba(0,0,0,0)');
