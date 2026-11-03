@@ -123,10 +123,23 @@ const N=240,SEG=[[0,59],[60,118],[119,176],[177,239]],UNIT=1.3; // UNIT = viewpo
 const imgs=new Array(N),ok=new Array(N).fill(false);
 /* phones get a lighter set (960 px, every 2nd frame in m/) to keep iPhone Safari memory low */
 const MOB=innerWidth<=900||Math.min(screen.width,screen.height)<=820;
+/* PHONE_MODE: 'auto' = animated, but switch to the light still-image version if the previous visit froze or crashed;
+   'animated' = always animate; 'still' = phones always use the light still-image version (most stable) */
+const PHONE_MODE='auto';
+const REP=[30,96,150,238];
+let LITE=matchMedia('(prefers-reduced-motion: reduce)').matches||(MOB&&PHONE_MODE==='still');
+try{if(MOB&&PHONE_MODE==='auto'){
+ const now=Date.now(),alive=JSON.parse(localStorage.getItem('jnl-alive')||'null'),lite=+localStorage.getItem('jnl-lite-until')||0;
+ /* last visit was still marked "running" (no clean exit) within 10 min → it froze or crashed */
+ if(alive&&alive.on&&now-alive.t<6e5){localStorage.setItem('jnl-lite-until',String(now+864e5));LITE=true}
+ else if(lite>now)LITE=true;
+ const beat=()=>{try{localStorage.setItem('jnl-alive',JSON.stringify({on:!document.hidden,t:Date.now()}))}catch(e){}};
+ beat();setInterval(beat,2000);document.addEventListener('visibilitychange',beat);addEventListener('pagehide',()=>{try{localStorage.setItem('jnl-alive',JSON.stringify({on:false,t:Date.now()}))}catch(e){}});
+}}catch(e){}
 const pad=i=>String(i).padStart(3,'0');
 const src=i=>MOB?'m/'+pad(i-(i%2))+'.webp':'f/'+pad(i)+'.webp';
 /* load the opening shot first so the page can start quickly, then everything else */
-const order=[...Array(N).keys()].filter(i=>!MOB||i%2===0).sort((a,b)=>(a<60?0:1)-(b<60?0:1)||a-b);
+const order=LITE?REP.slice():[...Array(N).keys()].filter(i=>!MOB||i%2===0).sort((a,b)=>(a<60?0:1)-(b<60?0:1)||a-b);
 /* full-size close-up, used only for the engraving preview */
 let plate=null;const plateReady=new Promise(r=>{const im=new Image();im.onload=()=>{plate=im;r()};im.onerror=r;im.src='f/239.webp'});
 let loaded=0;
@@ -134,16 +147,18 @@ let loaded=0;
    current position (a few at a time). Safari can silently drop decoded <img> data under memory pressure,
    which left the canvas empty; frames we decode ourselves stay put until we release them. */
 const BM=MOB&&typeof createImageBitmap==='function'&&typeof fetch==='function';
-const blobs=new Array(N),bm=new Map(),pending=new Set(),MAXC=14;let curF=0;
+const blobs=new Array(N),bm=new Map(),pending=new Set(),MAXC=10;let curF=0;
 function load(i){
  if(BM)return fetch(src(i)).then(r=>r.ok?r.blob():null).then(b=>{if(b){blobs[i]=b;ok[i]=true}}).catch(()=>{});
  return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{ok[i]=true;imgs[i]=im;r()};im.onerror=r;im.src=src(i)})}
-function decodeF(i){
- if(i<0||i>=N||!blobs[i]||bm.has(i)||pending.has(i))return;pending.add(i);
+function decodeF(i,must){
+ if(i<0||i>=N||!blobs[i]||bm.has(i)||pending.has(i))return;
+ if(pending.size>=(must?3:1))return; // never queue a pile of decodes during a fast flick
+ pending.add(i);
  createImageBitmap(blobs[i]).then(b=>{pending.delete(i);bm.set(i,b);trimF();need=true}).catch(()=>pending.delete(i))}
 function trimF(){while(bm.size>MAXC){let far=-1,fd=-1;for(const k of bm.keys()){const d=Math.abs(k-curF);if(d>fd){fd=d;far=k}}const b=bm.get(far);bm.delete(far);try{b.close()}catch(e){}}}
 const nearest=i=>{
- if(BM){const e=i-(i%2);curF=e;for(const d of [0,2,-2,4,-4,6])decodeF(e+d);
+ if(BM){const e=i-(i%2);curF=e;decodeF(e,true);for(const d of [2,-2,4,-4])decodeF(e+d);
   let best=null,bd=1e9;for(const [k,b] of bm){const d=Math.abs(k-e);if(d<bd){bd=d;best=b}}return best}
  for(let d=0;d<N;d++){if(ok[i-d])return imgs[i-d];if(ok[i+d])return imgs[i+d]}return null};
 
@@ -210,6 +225,8 @@ let target=0,cur=0,need=true,lastKey='';
 const prog=()=>{const vh=innerHeight,max=document.documentElement.scrollHeight-vh;return max>0?Math.min(1,scrollY/max)*(SEG.length-1+.999):0};
 addEventListener('scroll',()=>{target=prog()},{passive:true});
 function frameFor(P){
+ if(LITE){const k=Math.min(SEG.length-1,Math.floor(P)),l=P-k; // still images, soft cross-fade between scenes
+  if(k===SEG.length-1||l<.8)return{f:REP[k]};return{f:REP[k],next:REP[k+1],mix:(l-.8)/.2}}
  const k=Math.min(SEG.length-1,Math.floor(P)),l=P-k,[a,b]=SEG[k];
  if(k===SEG.length-1){const f=Math.min(1,l/.85);return{f:Math.round(a+f*(b-a))}}
  if(l<.8)return{f:Math.round(a+l/.8*(b-a))};
