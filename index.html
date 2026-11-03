@@ -13,6 +13,7 @@
 :root{--ink:#4a3125;--bg:#efe4d6;--scrim:239,228,214;--chip:rgba(255,255,255,.6);--dim:0}
 :root[data-theme="dark"]{--ink:#f6e8dc;--bg:#1d1512;--scrim:29,21,18;--chip:rgba(0,0,0,.35);--dim:.5}
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{overscroll-behavior-y:none}
 body{background:var(--bg);color:var(--ink);font:400 1rem/1.7 Archivo,system-ui,sans-serif;overflow-x:hidden}
 body.lock{overflow:hidden}
 button,input{font:inherit;color:inherit;background:none;border:0}
@@ -222,9 +223,11 @@ function buildEng(){
 
 /* ---------- scroll → frame ---------- */
 let target=0,cur=0,need=true,lastKey='';
-const prog=()=>{const vh=innerHeight,max=document.documentElement.scrollHeight-vh;return max>0?Math.min(1,scrollY/max)*(SEG.length-1+.999):0};
+/* iPhone "rubber-band" bounce gives scroll positions above the top (negative) or past the bottom: clamp them */
+const prog=()=>{const vh=innerHeight,max=document.documentElement.scrollHeight-vh;return max>0?Math.max(0,Math.min(1,scrollY/max))*(SEG.length-1+.999):0};
 addEventListener('scroll',()=>{target=prog()},{passive:true});
 function frameFor(P){
+ P=Math.max(0,Math.min(SEG.length-1+.999,+P||0));
  if(LITE){const k=Math.min(SEG.length-1,Math.floor(P)),l=P-k; // still images, soft cross-fade between scenes
   if(k===SEG.length-1||l<.8)return{f:REP[k]};return{f:REP[k],next:REP[k+1],mix:(l-.8)/.2}}
  const k=Math.min(SEG.length-1,Math.floor(P)),l=P-k,[a,b]=SEG[k];
@@ -243,12 +246,15 @@ function texts(P){
 const sm=(e0,e1,x)=>{const t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t)};
 let scene=0;
 function loop(){
- cur+=(target-cur)*.14;if(Math.abs(target-cur)<.0005)cur=target;
+ /* schedule the next frame first, so one unexpected error can never stop the animation for good */
+ requestAnimationFrame(loop);
+ try{
+ cur+=(target-cur)*.14;if(Math.abs(target-cur)<.0005)cur=target;if(!isFinite(cur))cur=0;
  const fr=frameFor(cur),key=fr.f+'|'+(fr.next??'')+'|'+(fr.mix??0).toFixed(3)+'|'+(engFrame?custom:'');
  if(key!==lastKey||need){
   const im=(fr.f>=N-2&&engFrame)?engFrame:nearest(fr.f);
   if(im){try{cx.globalAlpha=1;cx.fillStyle='#efe4d6';cx.fillRect(0,0,cv.width,cv.height);paint(im);if(fr.next!=null){const nx=nearest(fr.next);if(nx)paint(nx,fr.mix)}lastKey=key;need=false}catch(e){need=true}}}
- texts(cur);requestAnimationFrame(loop)}
+ texts(cur)}catch(e){need=true;lastKey=''}}
 
 const goTo=k=>{const max=document.documentElement.scrollHeight-innerHeight;scrollTo({top:max*k/(SEG.length-1+.999)+(k===SEG.length-1?max:0),behavior:'smooth'})};
 $$('[data-go]').forEach(b=>b.onclick=()=>goTo(+b.dataset.go));
