@@ -108,6 +108,7 @@ h1 { margin-top: 16px; font: 500 var(--h1)/.98 var(--serif); letter-spacing: .01
 .card-text { margin-top: 10px; font-size: .88rem; line-height: 1.55; }
 .card-link { display: inline-flex; align-items: center; gap: 16px; min-height: 40px; margin-top: 12px; border-bottom: 1px solid currentColor; font-size: .95rem; font-weight: 500; }
 .card-link::after { content: ""; position: absolute; inset: 0; }
+.card-text-m, .link-short { display: none; }
 @media (hover: hover) {
   .card:hover { transform: translateY(-3px); }
   .card:hover .card-img img { transform: scale(1.04); }
@@ -193,10 +194,27 @@ h1 { margin-top: 16px; font: 500 var(--h1)/.98 var(--serif); letter-spacing: .01
   .eyebrow { font-size: .72rem; letter-spacing: .17em; white-space: nowrap; }
   .eyebrow::before, .eyebrow::after { margin-inline: .5em; }
   :root { --h1: clamp(2.2rem, 11.4vw, 3.6rem); }
-  .card { grid-template-columns: minmax(0, 1fr); }
-  .card-img { aspect-ratio: 4 / 3; -webkit-mask-image: none; mask-image: none; }
-  .card-body { padding: 18px 22px 22px; }
-  .card h3 { white-space: normal; }
+  /* Phone entry cards: two short horizontal cards that fit on one screen together. */
+  .collections { padding-top: 28px; }
+  .collections-title.sr-only { position: static; width: auto; height: auto; margin: 0 0 14px; overflow: visible; clip-path: none; white-space: normal; font: italic 500 2rem/1.1 var(--serif); }
+  .card-grid { gap: 12px; }
+  .card { grid-template-columns: 36% minmax(0, 1fr); min-height: 0; border-radius: 16px; }
+  /* The whole photo stays visible; a blurred copy of the same photo fills the rest of the column. */
+  .card-img { display: flex; align-items: center; min-height: 128px; -webkit-mask-image: none; mask-image: none; }
+  .card-img::before { content: ""; position: absolute; inset: -24px; background: center / cover no-repeat; filter: blur(14px); }
+  .card-img-detail::before { background-image: url("assets/img/personalised-detail-phone.webp"); }
+  .card-img-curated { background: #1b1917; }
+  .card-img-curated::before { display: none; }
+  .card-img picture { display: block; width: 100%; }
+  .card-img img { position: relative; inset: auto; display: block; width: 100%; height: auto; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%); }
+  .card-body { padding: 14px 14px 12px 16px; }
+  .card h3 { font-size: 1.3rem; white-space: normal; }
+  .card-sub, .card-text, .link-full { display: none; }
+  .link-short { display: inline; }
+  .card-text-m { display: block; margin-top: 6px; font-size: .92rem; line-height: 1.45; }
+  .card-link { gap: 12px; min-height: 36px; margin-top: 8px; font-size: .95rem; }
+  .card-link:focus-visible { outline: none; }
+  .card:has(.card-link:focus-visible) { outline: 2px solid var(--espresso); outline-offset: 3px; }
   .values li { display: grid; grid-template-columns: 32px 1fr; column-gap: 16px; padding: 16px 0; text-align: left; }
   .values { grid-template-columns: minmax(0, 1fr); }
   .values li + li { border-left: 0; border-top: 1px solid var(--gold-line); }
