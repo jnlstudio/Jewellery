@@ -45,22 +45,5 @@
     items.forEach(function (el) { el.classList.add('in'); });
   }
 
-  /* Touch screens have no hover: push in to the engraved name once the card is well in view. */
-  var nameCard = document.querySelector('.card-img-stone');
-  if (nameCard && 'IntersectionObserver' in window && !window.matchMedia('(hover: hover)').matches) {
-    var card = nameCard.closest('.card');
-    var timer;
-    var watch = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          timer = setTimeout(function () { card.classList.add('is-detail'); watch.disconnect(); }, 700);
-        } else {
-          clearTimeout(timer);
-        }
-      });
-    }, { threshold: 0.6 });
-    watch.observe(nameCard);
-  }
-
   document.getElementById('year').textContent = new Date().getFullYear();
 })();
